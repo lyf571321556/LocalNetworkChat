@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">LocalChat</string>
+    <string name="discover">Discover</string>
+    <string name="connect">Connect</string>
+    <string name="register">Register Service</string>
+    <string name="connecting_toast">Connecting to server.</string>
+    <string name="discovering_toast">Discovering Chat services.</string>
+    <string name="register_toast">Registering as server.</string>
+</resources>
