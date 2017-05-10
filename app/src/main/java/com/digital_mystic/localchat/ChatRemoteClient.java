@@ -1,5 +1,6 @@
 package com.digital_mystic.localchat;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -27,6 +28,7 @@ public class ChatRemoteClient {
     private Thread sendThread;
     private Thread recThread;
     private Socket socket;
+    private String defaultUserName;
 
     private Handler uiHandler;
 
@@ -39,6 +41,7 @@ public class ChatRemoteClient {
         uiHandler = handler;
         sendThread = new Thread(new SendThread());
         sendThread.start();
+        defaultUserName = NsdHelper.serviceBaseName + Build.MODEL;
 
     }
 
@@ -134,12 +137,13 @@ public class ChatRemoteClient {
             } else if (socket.getOutputStream() == null) {
                 Log.d(TAG, "Socket output stream null!");
             }
+            String outMessage = defaultUserName+": "+msg;
             PrintWriter out = new PrintWriter(
                     new BufferedWriter(
                             new OutputStreamWriter(getSocket().getOutputStream())), true);
-            out.println(msg);
+            out.println(outMessage);
             out.flush();
-            passReceivedMessage(msg);
+            passReceivedMessage(outMessage);
         } catch (UnknownHostException e){
             e.printStackTrace();
         } catch (IOException e) {

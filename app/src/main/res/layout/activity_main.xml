@@ -9,8 +9,10 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:ems="10"
+        android:focusable="false"
+        android:gravity="top"
         android:inputType="textMultiLine"
-        android:focusable="false"/>
+        android:padding="5dp"/>
 
     <EditText
         android:id="@+id/sendMessageET"
