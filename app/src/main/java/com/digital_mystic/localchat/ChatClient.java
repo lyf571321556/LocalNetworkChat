@@ -21,18 +21,19 @@ import java.net.UnknownHostException;
  */
 
 
-public class ChatRemoteClient {
+public class ChatClient {
     private static final String TAG = "CLIENT";
     private InetAddress serverAddress;
     private int serverPort;
     private Thread sendThread;
     private Thread recThread;
     private Socket socket;
-    private String defaultUserName;
+    static String defaultUserName = NsdHelper.serviceBaseName + Build.MODEL;
 
     private Handler uiHandler;
+    private OnMessageReceivedListener onMessageReceivedListener;
 
-    public ChatRemoteClient(InetAddress serverAddress, int serverPort, Handler handler){
+    public ChatClient(InetAddress serverAddress, int serverPort, Handler handler){
         Log.d(TAG, "ServerAddress: " + serverAddress);
         Log.d(TAG, "ServerPort: " + serverPort);
 
@@ -41,11 +42,10 @@ public class ChatRemoteClient {
         uiHandler = handler;
         sendThread = new Thread(new SendThread());
         sendThread.start();
-        defaultUserName = NsdHelper.serviceBaseName + Build.MODEL;
 
     }
 
-    public ChatRemoteClient(Socket socket, Handler handler){
+    public ChatClient(Socket socket, Handler handler){
         Log.d(TAG, "ServerAddress: " + serverAddress);
         Log.d(TAG, "ServerPort: " + serverPort);
 
@@ -76,12 +76,19 @@ public class ChatRemoteClient {
         }
     }
 
-    private void passReceivedMessage(String string){
-        Message msg = Message.obtain();
-        Bundle bundle = new Bundle();
-        bundle.putString("MESSAGE", string);
-        msg.setData(bundle);
-        uiHandler.sendMessage(msg);
+    private void passMessage(String string, boolean isLocal){
+        if(!string.contains(defaultUserName)){
+            Message msg = Message.obtain();
+            Bundle bundle = new Bundle();
+            bundle.putString("MESSAGE", string);
+            bundle.putBoolean("LOCAL", isLocal);
+            msg.setData(bundle);
+            onMessageReceivedListener.onMessageReceived(string);
+        }
+    }
+
+    public void setOnMessageReceivedListener(OnMessageReceivedListener onMessageReceivedListener) {
+        this.onMessageReceivedListener = onMessageReceivedListener;
     }
 
 
@@ -97,7 +104,7 @@ public class ChatRemoteClient {
                     messageStr = input.readLine();
                     if (messageStr != null) {
                         Log.d(TAG, "Read from the stream: " + messageStr);
-                        passReceivedMessage(messageStr);
+                        passMessage(messageStr,false);
                     } else {
                         Log.d(TAG, "Null message");
                         break;
@@ -137,13 +144,11 @@ public class ChatRemoteClient {
             } else if (socket.getOutputStream() == null) {
                 Log.d(TAG, "Socket output stream null!");
             }
-            String outMessage = defaultUserName+": "+msg;
             PrintWriter out = new PrintWriter(
                     new BufferedWriter(
                             new OutputStreamWriter(getSocket().getOutputStream())), true);
-            out.println(outMessage);
+            out.println(msg);
             out.flush();
-            passReceivedMessage(outMessage);
         } catch (UnknownHostException e){
             e.printStackTrace();
         } catch (IOException e) {
@@ -154,6 +159,9 @@ public class ChatRemoteClient {
     }
 
 
+    interface OnMessageReceivedListener{
+        void onMessageReceived(String msg);
 
+    }
 
 }

@@ -12,48 +12,30 @@ import java.net.Socket;
 
 public class ChatServer {
     private static final String TAG = "ChatServer";
-    Thread acceptThread;
-    ServerSocket mServerSocket;
-    Socket socket;
-    OnClientConnectedListener clientConnectedListener;
+    private Thread acceptThread;
+    private ServerSocket mServerSocket;
+    private OnClientConnectedListener clientConnectedListener;
 
     private int localPort;
+    private static boolean isServer;
+        
+    public static boolean isServer(){
+        return isServer;
+    }
 
-    public int getLocalPort() {
+    int getLocalPort() {
         return localPort;
     }
 
-    public void setLocalPort(int localPort){
+    void setLocalPort(int localPort){
         this.localPort = localPort;
     }
 
-    public Socket getClientSocket(){
-        return socket;
-    }
-
-    private void setClientSocket(Socket socket){
-        Log.d(TAG, "setSocket being called.");
-        if (socket == null) {
-            Log.d(TAG, "Setting a null socket.");
-        }
-        if (this.socket != null) {
-            if (this.socket.isConnected()) {
-                try {
-                    this.socket.close();
-                } catch (IOException e) {
-                    // TODO(alexlucas): Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-        }
-        this.socket = socket;
-    }
-
-
-    public ChatServer(OnClientConnectedListener connectedListener){
+    ChatServer(OnClientConnectedListener connectedListener){
         clientConnectedListener = connectedListener;
         try {
             mServerSocket = new ServerSocket(0);
+            setLocalPort(mServerSocket.getLocalPort());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -61,9 +43,7 @@ public class ChatServer {
         acceptThread.start();
     }
 
-
-
-    public void shutdown(){
+    void shutdown(){
         if(!mServerSocket.isClosed()){
             try {
                 mServerSocket.close();
@@ -74,21 +54,21 @@ public class ChatServer {
     }
 
 
-    class ServerThread implements Runnable {
+    private class ServerThread implements Runnable {
 
         @Override
         public void run() {
             try {
-                setLocalPort(mServerSocket.getLocalPort());
                 while (!Thread.currentThread().isInterrupted()) {
                     Log.d(TAG, "Server listening:");
-                    setClientSocket(mServerSocket.accept());
+                    Socket socket = mServerSocket.accept();
                     Log.d(TAG, "Client accepted.");
-                    Log.d(TAG, "Client: " + getClientSocket().getInetAddress()+ ":"+ getClientSocket().getPort());
-                    clientConnectedListener.onClientConnected(getClientSocket());
+                    Log.d(TAG, "Client: " + socket.getInetAddress()+ ":"+ socket.getPort());
+                    clientConnectedListener.onClientConnected(socket);
+                    isServer = true;
                 }
             } catch (IOException e){
-                Log.d("Server", "Error creating serversocket", e);
+                Log.d("Server", "Server socket error", e);
                 e.printStackTrace();
 
             }

@@ -1,6 +1,7 @@
 package com.digital_mystic.localchat;
 
 import android.Manifest;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
@@ -9,12 +10,14 @@ import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -32,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
         incomingHandler = new Handler(Looper.getMainLooper()){
             @Override
@@ -110,6 +114,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.register:
                 Toast.makeText(this, R.string.register_toast, Toast.LENGTH_LONG).show();
+                connection.startServer();
                 isServer = true;
                 nsdHelper.registerService(connection.getPort());
                 break;

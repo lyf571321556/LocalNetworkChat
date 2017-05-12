@@ -5,39 +5,36 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Class that holds logic for setting up client-side and server-side connections
  */
-public class Connection implements ChatServer.OnClientConnectedListener{
-    Handler statusHandler;
+public class Connection implements ChatServer.OnClientConnectedListener, ChatClient.OnMessageReceivedListener{
+    private Handler statusHandler;
     private static final String TAG = "Connection";
-    private ChatRemoteClient chatClient;
+    private ChatClient chatClient;
     private ChatServer chatServer;
-
-    private Socket socket;
-    private int port = -1;
+    private List<ChatClient> clientList;
 
     /**
      *
-     * @param handler passes messages back to the UI. Use by client and server
+     * @param handler passes messages back to the UI. Used by client and server
      */
-    public Connection(Handler handler) {
+    Connection(Handler handler) {
         statusHandler = handler;
+        clientList = new ArrayList<>();
+    }
+
+    void startServer(){
         chatServer = new ChatServer(this);
     }
 
-    public void cleanUp(){
+    void cleanUp(){
         if(chatClient != null){
             chatClient.shutdown();
         }
@@ -47,58 +44,61 @@ public class Connection implements ChatServer.OnClientConnectedListener{
         }
     }
 
-    public void connectToServer(InetAddress address, int port){
+    void connectToServer(InetAddress address, int port){
         Log.d("ConnectToServer", "" + address + port);
-        chatClient = new ChatRemoteClient(address, port, statusHandler);
+        chatClient = new ChatClient(address, port, statusHandler);
+        chatClient.setOnMessageReceivedListener(this);
+        clientList.add(chatClient);
 
     }
 
-    private synchronized void setSocket(Socket socket){
-        Log.d(TAG,"setSocket");
-        if(socket == null){
-            Log.d(TAG, "Socket null");
-        }
-        //FIXME allows only 1 connection
-        if( this.socket !=null){
-            if( this.socket.isConnected()){
-                try {
-                    this.socket.close();
-                } catch (IOException e){
-                    e.printStackTrace();
-                }
-            }
-        }
-        this.socket = socket;
-    }
-
-    private Socket getSocket(){
-        return socket;
-    }
-
-    public int getPort(){
+    int getPort(){
         return chatServer.getLocalPort();
     }
 
-    private void setPort(int port){
-        this.port = port;
+    void sendMessage(String msg){
+        //Prepend username and send message to clients
+        StringBuilder builder = new StringBuilder();
+        builder.append(ChatClient.defaultUserName);
+        builder.append(":");
+        builder.append(msg);
+        forwardMessage(builder.toString());
 
-    }
-    private void updateMessage(String message, boolean isLocal){
-        Message msg = Message.obtain();
+        //Pass message back to UI
+        Message message = Message.obtain();
         Bundle bundle = new Bundle();
-        bundle.putString("MESSAGE",message);
-        msg.setData(bundle);
-        statusHandler.sendMessage(msg);
+        bundle.putString("MESSAGE",builder.toString());
+        bundle.putBoolean("LOCAL",true);
+        message.setData(bundle);
+        statusHandler.sendMessage(message);
     }
 
-    public void sendMessage(String msg){
-        if(chatClient != null){
-            chatClient.sendMessage(msg);
+    void forwardMessage(String msg){
+        for(ChatClient c: clientList){
+            if(c != null){
+                c.sendMessage(msg);
+            }
         }
+
     }
 
     @Override
     public void onClientConnected(Socket socket) {
-        chatClient = new ChatRemoteClient(socket, statusHandler);
+        chatClient = new ChatClient(socket, statusHandler);
+        chatClient.setOnMessageReceivedListener(this);
+        clientList.add(chatClient);
+    }
+
+    @Override
+    public void onMessageReceived(String message) {
+        if(ChatServer.isServer()){
+            forwardMessage(message);
+        }
+        Message msg = Message.obtain();
+        Bundle bundle = new Bundle();
+        bundle.putString("MESSAGE", message);
+        msg.setData(bundle);
+        statusHandler.sendMessage(msg);
+
     }
 }
